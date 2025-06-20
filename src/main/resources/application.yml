@@ -1,6 +1,9 @@
 spring:
   application:
     name: CjrAgent
+  profiles:
+    active: local
+
 server:
   port: 8123
   servlet:

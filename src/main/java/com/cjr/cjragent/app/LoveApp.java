@@ -1,6 +1,7 @@
 package com.cjr.cjragent.app;
 
 import com.cjr.cjragent.advisor.MyLoggerAdvisor;
+import com.cjr.cjragent.chatmemory.FileBasedChatMemory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
@@ -9,6 +10,8 @@ import org.springframework.ai.chat.memory.InMemoryChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY;
 import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_RETRIEVE_SIZE_KEY;
@@ -29,8 +32,11 @@ public class LoveApp {
      * @param dashscopeChatModel
      */
     public LoveApp(ChatModel dashscopeChatModel) {
+        //初始化基于文件存储的对话记忆
+        String firleDir = System.getProperty("user.dir")+"/tmp/chat-memory";
+        ChatMemory  chatMemory = new FileBasedChatMemory(firleDir);
         // 初始化基于内存的对话记忆
-        ChatMemory chatMemory = new InMemoryChatMemory();
+//        ChatMemory chatMemory = new InMemoryChatMemory();
         chatClient = ChatClient.builder(dashscopeChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
                 .defaultAdvisors(
@@ -61,5 +67,28 @@ public class LoveApp {
         log.info("content: {}", content);
         return content;
     }
+
+    /**
+     * AI 恋爱报告（实战结构化输出）
+     * 定义一个数据类 LoveReport，包含标题和建议列表
+     * @param title
+     * @param suggestions
+     */
+    record LoveReport(String title, List<String> suggestions) {
+    }
+
+    public LoveReport doChatWithReport(String message, String chatId) {
+        LoveReport loveReport = chatClient
+                .prompt()
+                .system(SYSTEM_PROMPT + "每次对话后都要生成恋爱结果，标题为{用户名}的恋爱报告，内容为建议列表")
+                .user(message)
+                .advisors(spec -> spec.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
+                        .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
+                .call()
+                .entity(LoveReport.class);
+        log.info("loveReport: {}", loveReport);
+        return loveReport;
+    }
+
 
 }
